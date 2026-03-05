@@ -42,6 +42,10 @@ const ProjectView = () => {
     const [newTaskTitle, setNewTaskTitle] = useState('');
     const [newTaskStatus, setNewTaskStatus] = useState('todo');
     const [taskLoading, setTaskLoading] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [priorityFilter, setPriorityFilter] = useState('all');
+    const [assigneeFilter, setAssigneeFilter] = useState('all');
+    const [dueFilter, setDueFilter] = useState('all'); // all | overdue | today | upcoming | noDue
 
     useEffect(() => {
         const init = async () => {
@@ -119,6 +123,60 @@ const ProjectView = () => {
         showToast({ message: 'Project link copied to clipboard!', type: 'success' });
     };
 
+    const filterBySearchAndFilters = (task) => {
+        const q = searchTerm.trim().toLowerCase();
+        if (q) {
+            const inTitle = task.title?.toLowerCase().includes(q);
+            const inDescription = task.description?.toLowerCase().includes(q);
+            const inAssignee = task.assignedTo?.name?.toLowerCase().includes(q);
+            if (!inTitle && !inDescription && !inAssignee) return false;
+        }
+
+        if (priorityFilter !== 'all' && task.priority !== priorityFilter) {
+            return false;
+        }
+
+        if (assigneeFilter !== 'all') {
+            if (assigneeFilter === 'unassigned' && task.assignedTo) return false;
+            if (
+                assigneeFilter !== 'unassigned' &&
+                (!task.assignedTo || task.assignedTo._id !== assigneeFilter)
+            ) {
+                return false;
+            }
+        }
+
+        if (dueFilter !== 'all') {
+            const due = task.dueDate ? new Date(task.dueDate) : null;
+            const now = new Date();
+            const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+
+            if (dueFilter === 'noDue') {
+                if (due) return false;
+            } else if (!due) {
+                return false;
+            } else if (dueFilter === 'overdue') {
+                if (due >= startOfToday) return false;
+            } else if (dueFilter === 'today') {
+                if (due < startOfToday || due >= endOfToday) return false;
+            } else if (dueFilter === 'upcoming') {
+                if (due < endOfToday) return false;
+            }
+        }
+
+        return true;
+    };
+
+    const assigneeOptions = [
+        { value: 'all', label: 'All assignees' },
+        { value: 'unassigned', label: 'Unassigned' },
+        ...(currentProject?.members || []).map((m) => ({
+            value: m.user?._id,
+            label: m.user?.name || 'Member',
+        })),
+    ];
+
     return (
         <div className="h-full flex flex-col space-y-6">
             {/* Header */}
@@ -171,27 +229,69 @@ const ProjectView = () => {
             </div>
 
             {/* Filter Bar */}
-            <div className="flex items-center justify-between bg-slate-900/40 p-3 rounded-xl border border-slate-800/50">
-                <div className="flex items-center space-x-4">
-                    <div className="relative">
+            <div className="flex flex-col gap-3 bg-slate-900/40 p-3 rounded-xl border border-slate-800/50 md:flex-row md:items-center md:justify-between">
+                <div className="flex flex-1 flex-col gap-3 md:flex-row md:items-center md:space-x-4">
+                    <div className="relative md:w-72">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
                         <input
                             type="text"
-                            placeholder="Search board..."
-                            className="bg-slate-950/50 border border-slate-700/50 rounded-lg pl-10 pr-4 py-1.5 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 w-64"
+                            placeholder="Search tasks by title, description, assignee..."
+                            className="w-full bg-slate-950/50 border border-slate-700/50 rounded-lg pl-10 pr-4 py-1.5 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
-                    <Button variant="ghost" size="sm" className="text-slate-400 hover:text-slate-200">
-                        <Filter size={16} className="mr-2" />
-                        Filters
-                    </Button>
+                    <div className="flex flex-wrap gap-2">
+                        <div className="flex items-center space-x-2">
+                            <span className="text-xs text-slate-500 font-medium">Priority</span>
+                            <select
+                                className="bg-slate-950/60 border border-slate-700/70 rounded-md px-2 py-1 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                value={priorityFilter}
+                                onChange={(e) => setPriorityFilter(e.target.value)}
+                            >
+                                <option value="all">All</option>
+                                <option value="critical">Critical</option>
+                                <option value="high">High</option>
+                                <option value="medium">Medium</option>
+                                <option value="low">Low</option>
+                            </select>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <span className="text-xs text-slate-500 font-medium">Assignee</span>
+                            <select
+                                className="bg-slate-950/60 border border-slate-700/70 rounded-md px-2 py-1 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 max-w-[160px]"
+                                value={assigneeFilter}
+                                onChange={(e) => setAssigneeFilter(e.target.value)}
+                            >
+                                {assigneeOptions.map((opt) => (
+                                    <option key={opt.value || opt.label} value={opt.value || ''}>
+                                        {opt.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <span className="text-xs text-slate-500 font-medium">Due</span>
+                            <select
+                                className="bg-slate-950/60 border border-slate-700/70 rounded-md px-2 py-1 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                value={dueFilter}
+                                onChange={(e) => setDueFilter(e.target.value)}
+                            >
+                                <option value="all">All</option>
+                                <option value="overdue">Overdue</option>
+                                <option value="today">Today</option>
+                                <option value="upcoming">Upcoming</option>
+                                <option value="noDue">No due date</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
                 <div className="flex items-center space-x-2">
                     <span className="text-xs text-slate-500 font-medium">Group by:</span>
                     <select className="bg-transparent text-xs text-slate-300 font-medium border-none focus:ring-0 cursor-pointer">
                         <option>Status</option>
-                        <option>Assignee</option>
-                        <option>Priority</option>
+                        <option disabled>Assignee (coming soon)</option>
+                        <option disabled>Priority (coming soon)</option>
                     </select>
                 </div>
             </div>
@@ -206,7 +306,7 @@ const ProjectView = () => {
                                     {column.icon}
                                     <h2 className="text-sm font-bold uppercase tracking-widest text-slate-400">{column.title}</h2>
                                     <span className="bg-slate-800 text-slate-500 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                                        {tasks.filter(t => t.status === column.id).length}
+                                        {tasks.filter((t) => t.status === column.id && filterBySearchAndFilters(t)).length}
                                     </span>
                                 </div>
                                 <button
@@ -230,6 +330,7 @@ const ProjectView = () => {
                                     >
                                         {tasks
                                             .filter((task) => task.status === column.id)
+                                            .filter(filterBySearchAndFilters)
                                             .sort((a, b) => a.order - b.order)
                                             .map((task, index) => (
                                                 <Draggable key={task._id} draggableId={task._id} index={index}>

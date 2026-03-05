@@ -18,6 +18,7 @@ const Dashboard = () => {
     const [projectKey, setProjectKey] = useState('');
     const [projectDescription, setProjectDescription] = useState('');
     const [createLoading, setCreateLoading] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
         fetchProjects();
@@ -47,21 +48,43 @@ const Dashboard = () => {
         '#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'
     ];
 
+    const filteredProjects = projects.filter((project) => {
+        if (!searchTerm.trim()) return true;
+        const q = searchTerm.toLowerCase();
+        return (
+            project.name?.toLowerCase().includes(q) ||
+            project.key?.toLowerCase().includes(q) ||
+            project.description?.toLowerCase().includes(q)
+        );
+    });
+
     return (
         <div className="space-y-8">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
                     <h1 className="text-3xl font-bold text-white">Project Dashboard</h1>
                     <p className="mt-1 text-slate-400">Welcome back, {user?.name}. Here's what's happening with your projects.</p>
                 </div>
-                <Button onClick={() => setIsModalOpen(true)} className="shadow-lg shadow-indigo-500/20">
-                    <Plus size={18} className="mr-2" />
-                    Create Project
-                </Button>
+                <div className="flex w-full flex-col items-stretch gap-3 md:w-auto md:flex-row md:items-center">
+                    <div className="relative md:w-72">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+                        <input
+                            type="text"
+                            placeholder="Search projects..."
+                            className="w-full rounded-lg border border-slate-700 bg-slate-900 pl-9 pr-3 py-1.5 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                    <Button onClick={() => setIsModalOpen(true)} className="shadow-lg shadow-indigo-500/20">
+                        <Plus size={18} className="mr-2" />
+                        Create Project
+                    </Button>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {projects.map((project) => (
+                {filteredProjects.map((project) => (
                     <Card
                         key={project._id}
                         className="group relative flex flex-col p-6 cursor-pointer hover:border-indigo-500/50 hover:bg-slate-800/80 transition-all"
@@ -119,7 +142,7 @@ const Dashboard = () => {
                     </Card>
                 ))}
 
-                {projects.length === 0 && !loading && (
+                {filteredProjects.length === 0 && !loading && (
                     <div className="col-span-full flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-800 p-12 text-center">
                         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-900 text-slate-600">
                             <ProjectIcon size={32} />

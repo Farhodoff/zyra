@@ -3,6 +3,9 @@ const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const helmet = require('helmet');
+const compression = require('compression');
+const path = require('path');
 const connectDB = require('./config/db');
 const setupSocket = require('./socket/socketHandler');
 
@@ -30,9 +33,13 @@ const io = new Server(server, {
 app.set('io', io);
 
 // Middleware
+app.use(helmet({
+    contentSecurityPolicy: false, // Set to false if you have trouble with cross-origin resources in dev/prod
+}));
+app.use(compression());
 app.use(
     cors({
-        origin: process.env.CLIENT_URL || 'http://localhost:5173',
+        origin: process.env.CLIENT_URL || 'http://localhost:5174',
         credentials: true,
     })
 );
@@ -51,10 +58,20 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'OK', time: new Date().toISOString() });
 });
 
-// 404 handler
-app.use((req, res) => {
-    res.status(404).json({ message: `Route ${req.originalUrl} not found` });
-});
+// Serve static assets in production
+if (process.env.NODE_ENV === 'production') {
+    // Set static folder
+    app.use(express.static(path.join(__dirname, '../../frontend/dist')));
+
+    app.get('*', (req, res) => {
+        res.sendFile(path.resolve(__dirname, '../../frontend', 'dist', 'index.html'));
+    });
+} else {
+    // 404 handler for development
+    app.use((req, res) => {
+        res.status(404).json({ message: `Route ${req.originalUrl} not found` });
+    });
+}
 
 // Global error handler
 app.use((err, req, res, next) => {

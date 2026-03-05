@@ -127,5 +127,30 @@ The application should now be running.
 
 ---
 
+## 🚢 Deployment (Production)
+
+To deploy the application in production mode using Docker:
+
+### 1. Requirements
+- [Docker](https://www.docker.com/get-started) and Docker Compose installed.
+
+### 2. Build & Run
+Run the following command in the root directory:
+
+```bash
+docker-compose -f docker-compose.prod.yml up --build -d
+```
+
+This will:
+1. Build the frontend in a temporary container.
+2. Copy the build to the backend container.
+3. Start a MongoDB instance and the Node.js server.
+4. Serve the app at `http://localhost:5001`.
+
+### 3. Production Environment
+Make sure to update the environment variables in `docker-compose.prod.yml` (especially `JWT_SECRET`) before deploying.
+
+---
+
 ## 🤝 Contributing
 Contributions, issues, and feature requests are welcome! Feel free to check the issues page.

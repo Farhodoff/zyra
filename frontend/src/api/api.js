@@ -47,6 +47,15 @@ export const getTaskById = (id) => API.get(`/tasks/${id}`);
 export const createTask = (data) => API.post('/tasks', data);
 export const updateTask = (id, data) => API.put(`/tasks/${id}`, data);
 export const deleteTask = (id) => API.delete(`/tasks/${id}`);
+export const uploadAttachment = (taskId, file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return API.post(`/tasks/${taskId}/attachments`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+    });
+};
+export const deleteAttachment = (taskId, attachmentId) =>
+    API.delete(`/tasks/${taskId}/attachments/${attachmentId}`);
 
 // Comments
 export const getComments = (taskId) => API.get(`/comments?taskId=${taskId}`);

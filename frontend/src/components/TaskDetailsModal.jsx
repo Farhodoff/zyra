@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import useTaskStore from '../store/taskStore';
 import useAuthStore from '../store/authStore';
-import { getComments, addComment, deleteComment } from '../api/api';
+import { getComments, addComment, deleteComment, uploadAttachment, deleteAttachment } from '../api/api';
 import Button from './ui/Button';
 import Modal from './ui/Modal';
 import Input from './ui/Input';
@@ -20,6 +20,7 @@ const TaskDetailsModal = ({ isOpen, onClose, task }) => {
     const [commentLoading, setCommentLoading] = useState(false);
     const [isEditingDescription, setIsEditingDescription] = useState(false);
     const [description, setDescription] = useState(task?.description || '');
+    const [uploading, setUploading] = useState(false);
 
     useEffect(() => {
         if (isOpen && task?._id) {
@@ -61,6 +62,31 @@ const TaskDetailsModal = ({ isOpen, onClose, task }) => {
         if (window.confirm('Are you sure you want to delete this task?')) {
             await deleteTask(task._id);
             onClose();
+        }
+    };
+
+    const handleFileChange = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setUploading(true);
+        try {
+            const { data } = await uploadAttachment(task._id, file);
+            await updateTask(task._id, data.task);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setUploading(false);
+            e.target.value = '';
+        }
+    };
+
+    const handleRemoveAttachment = async (attachmentId) => {
+        if (!window.confirm('Remove this attachment?')) return;
+        try {
+            const { data } = await deleteAttachment(task._id, attachmentId);
+            await updateTask(task._id, data.task);
+        } catch (err) {
+            console.error(err);
         }
     };
 
@@ -193,11 +219,55 @@ const TaskDetailsModal = ({ isOpen, onClose, task }) => {
 
                     <hr className="border-slate-800" />
 
-                    <div className="space-y-2">
-                        <Button variant="outline" size="sm" className="w-full !justify-start">
-                            <Paperclip size={16} className="mr-2" />
-                            Attachments
-                        </Button>
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <label className="w-full">
+                                <span className="inline-flex w-full">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="w-full !justify-start cursor-pointer"
+                                        disabled={uploading}
+                                    >
+                                        <Paperclip size={16} className="mr-2" />
+                                        {uploading ? 'Uploading...' : 'Add Attachment'}
+                                    </Button>
+                                </span>
+                                <input
+                                    type="file"
+                                    className="hidden"
+                                    onChange={handleFileChange}
+                                    accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                                />
+                            </label>
+                            {task.attachments && task.attachments.length > 0 && (
+                                <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                                    {task.attachments.map((att) => (
+                                        <div
+                                            key={att._id || att.publicId || att.url}
+                                            className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2 text-xs text-slate-200"
+                                        >
+                                            <a
+                                                href={att.url}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="truncate hover:text-indigo-400"
+                                            >
+                                                {att.filename || att.url}
+                                            </a>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRemoveAttachment(att._id)}
+                                                className="ml-2 text-slate-500 hover:text-red-400"
+                                            >
+                                                <X size={14} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                         <Button variant="outline" size="sm" className="w-full !justify-start">
                             <Calendar size={16} className="mr-2" />
                             Due Date

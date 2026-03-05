@@ -1,3 +1,5 @@
+const path = require('path');
+const fs = require('fs');
 const Task = require('../models/Task');
 const Project = require('../models/Project');
 const Notification = require('../models/Notification');
@@ -216,4 +218,94 @@ const deleteTask = async (req, res) => {
     }
 };
 
-module.exports = { getTasks, getTaskById, createTask, updateTask, deleteTask };
+// @desc    Upload attachment for a task
+// @route   POST /api/tasks/:id/attachments
+// @access  Private
+const addAttachment = async (req, res) => {
+    try {
+        const task = await Task.findById(req.params.id);
+        if (!task) return res.status(404).json({ message: 'Task not found' });
+
+        const project = await Project.findById(task.project);
+        if (!isMember(project, req.user._id))
+            return res.status(403).json({ message: 'Not authorized' });
+
+        if (!req.file) {
+            return res.status(400).json({ message: 'File is required' });
+        }
+
+        const uploadsUrlBase = '/uploads';
+        const relativePath = path.join('tasks', task._id.toString(), req.file.filename);
+        const url = `${uploadsUrlBase}/${relativePath.replace(/\\\\/g, '/')}`;
+
+        const attachment = {
+            url,
+            publicId: relativePath,
+            filename: req.file.originalname,
+        };
+
+        task.attachments.push(attachment);
+        await task.save();
+
+        const populated = await task.populate([
+            { path: 'assignedTo', select: 'name email avatar' },
+            { path: 'createdBy', select: 'name email avatar' },
+        ]);
+
+        const io = req.app.get('io');
+        if (io) {
+            io.to(`project_${task.project}`).emit('task:updated', populated);
+        }
+
+        res.status(201).json({
+            attachment,
+            task: populated,
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Remove attachment from task
+// @route   DELETE /api/tasks/:id/attachments/:attachmentId
+// @access  Private
+const removeAttachment = async (req, res) => {
+    try {
+        const task = await Task.findById(req.params.id);
+        if (!task) return res.status(404).json({ message: 'Task not found' });
+
+        const project = await Project.findById(task.project);
+        if (!isMember(project, req.user._id))
+            return res.status(403).json({ message: 'Not authorized' });
+
+        const attachment = task.attachments.id(req.params.attachmentId);
+        if (!attachment) {
+            return res.status(404).json({ message: 'Attachment not found' });
+        }
+
+        // Try to remove file from disk (best-effort)
+        if (attachment.publicId) {
+            const filePath = path.join(__dirname, '../uploads', attachment.publicId);
+            fs.unlink(filePath, () => { });
+        }
+
+        attachment.deleteOne();
+        await task.save();
+
+        const populated = await task.populate([
+            { path: 'assignedTo', select: 'name email avatar' },
+            { path: 'createdBy', select: 'name email avatar' },
+        ]);
+
+        const io = req.app.get('io');
+        if (io) {
+            io.to(`project_${task.project}`).emit('task:updated', populated);
+        }
+
+        res.json({ message: 'Attachment removed', task: populated });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+module.exports = { getTasks, getTaskById, createTask, updateTask, deleteTask, addAttachment, removeAttachment };

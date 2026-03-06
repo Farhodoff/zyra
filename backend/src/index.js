@@ -19,11 +19,13 @@ const notificationRoutes = require('./routes/notifications');
 dotenv.config();
 connectDB();
 
+const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: process.env.CLIENT_URL || 'http://localhost:5173',
+        origin: CLIENT_URL,
         methods: ['GET', 'POST', 'PUT', 'DELETE'],
         credentials: true,
     },
@@ -39,7 +41,7 @@ app.use(helmet({
 app.use(compression());
 app.use(
     cors({
-        origin: process.env.CLIENT_URL || 'http://localhost:5174',
+        origin: CLIENT_URL,
         credentials: true,
     })
 );

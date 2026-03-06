@@ -50,9 +50,7 @@ export const deleteTask = (id) => API.delete(`/tasks/${id}`);
 export const uploadAttachment = (taskId, file) => {
     const formData = new FormData();
     formData.append('file', file);
-    return API.post(`/tasks/${taskId}/attachments`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    return API.post(`/tasks/${taskId}/attachments`, formData);
 };
 export const deleteAttachment = (taskId, attachmentId) =>
     API.delete(`/tasks/${taskId}/attachments/${attachmentId}`);

@@ -1,6 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 const router = express.Router();
 const {
   getTasks,
@@ -17,8 +18,9 @@ const { protect } = require('../middleware/authMiddleware');
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const taskId = req.params.id || 'general';
-    const uploadPath = path.join(__dirname, '../uploads/tasks', taskId);
-    cb(null, uploadPath);
+    const uploadDir = path.join(__dirname, '..', 'uploads', 'tasks', taskId);
+    fs.mkdirSync(uploadDir, { recursive: true });
+    cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);

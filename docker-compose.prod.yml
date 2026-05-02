@@ -7,7 +7,7 @@ services:
       - "5001:5001"
     environment:
       - NODE_ENV=production
-      - MONGO_URI=mongodb://mongodb:27017/jiraclone
+      - MONGO_URI=mongodb://mongodb:27017/zyraclone
       - PORT=5001
       - JWT_SECRET=your_production_secret_key_change_me
       - CLIENT_URL=http://localhost:5001

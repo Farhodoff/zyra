@@ -42,7 +42,7 @@
 ---
 # Zyra Clone (SaaS Project Management Platform)
 
-A full-stack project management and collaboration platform inspired by Jira and Trello. This application enables teams to seamlessly manage workspaces, track tasks across Kanban boards, and collaborate in real-time.
+A full-stack project management and collaboration platform inspired by Zyra and Trello. This application enables teams to seamlessly manage workspaces, track tasks across Kanban boards, and collaborate in real-time.
 
 ---
 
@@ -101,7 +101,7 @@ Create `.env` files in both directories.
 ```env
 NODE_ENV=development
 PORT=5001
-MONGO_URI=mongodb://localhost:27017/jiraclone  # Or your MongoDB Atlas URI
+MONGO_URI=mongodb://localhost:27017/zyraclone  # Or your MongoDB Atlas URI
 JWT_SECRET=your_super_secret_jwt_key
 JWT_EXPIRE=7d
 CLOUDINARY_CLOUD_NAME=your_cloud_name
